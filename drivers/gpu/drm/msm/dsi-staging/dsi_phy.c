@@ -722,10 +722,9 @@ error:
  * Return: error code.
  */
 int dsi_phy_enable(struct msm_dsi_phy *phy,
-			struct dsi_host_config *config,
-			enum dsi_phy_pll_source pll_source,
-			bool skip_validation,
-			bool cont_splash_enabled)
+		   struct dsi_host_config *config,
+		   enum dsi_phy_pll_source pll_source,
+		   bool skip_validation)
 {
 	int rc = 0;
 
@@ -760,8 +759,7 @@ int dsi_phy_enable(struct msm_dsi_phy *phy,
 		goto error_disable_clks;
 	}
 
-	if (!cont_splash_enabled)
-		dsi_phy_enable_hw(phy);
+	dsi_phy_enable_hw(phy);
 
 error_disable_clks:
 	rc = dsi_clk_enable_core_clks(&phy->clks.core_clks, false);

@@ -31,6 +31,7 @@
 #include "peripheral-loader.h"
 #include "pil-q6v5.h"
 #include "pil-msa.h"
+#include "../../fih/fih_ramtable.h"
 
 /* Q6 Register Offsets */
 #define QDSP6SS_RST_EVB			0x010
@@ -331,9 +332,6 @@ int pil_mss_shutdown(struct pil_desc *pil)
 		drv->is_booted = false;
 	}
 
-	if (drv->mx_spike_wa && drv->ahb_clk_vote)
-		clk_disable_unprepare(drv->ahb_clk);
-
 	return ret;
 }
 
@@ -550,6 +548,10 @@ err_restart:
 err_power:
 	return ret;
 }
+#ifdef CONFIG_FIH_NV
+static bool fih_nv_assigned = false;
+#define FIH_NV_SIZE (NV_RF_SIZE + NV_CUST_SIZE + NV_DEFAULT_SIZE)
+#endif
 
 int pil_mss_reset_load_mba(struct pil_desc *pil)
 {
@@ -567,6 +569,25 @@ int pil_mss_reset_load_mba(struct pil_desc *pil)
 	struct device *dma_dev = md->mba_mem_dev_fixed ?: &md->mba_mem_dev;
 
 	trace_pil_func(__func__);
+
+#ifdef CONFIG_FIH_NV
+	pr_err("%s: %s\n", __func__, pil->name);
+	if (!(strncmp(pil->name, "modem", sizeof(char)*5))) {
+		if (!fih_nv_assigned) {
+			pr_err("%s: Assign %s memory 0x%x 0x%x (initial)\n", __func__, pil->name, FIH_RAM_BASE, FIH_NV_SIZE);
+			ret = pil_assign_mem_to_subsys_and_linux(pil, FIH_RAM_BASE, FIH_NV_SIZE);
+			if (ret) {
+				pr_err("%s: Assign %s memory Error !!!!!!\n", __func__, pil->name);
+				fih_nv_assigned = false;
+				dev_err(pil->dev, "Failed to assign %s memory, ret - %d\n", pil->name, ret);
+			}
+			fih_nv_assigned = true;
+		} else {
+			pr_err("%s: Assign %s memory 0x%x 0x%x (re-init)\n", __func__, pil->name, FIH_RAM_BASE, FIH_NV_SIZE);
+		}
+	}
+#endif
+
 	fw_name_p = drv->non_elf_image ? fw_name_legacy : fw_name;
 	ret = request_firmware(&fw, fw_name_p, pil->dev);
 	if (ret) {
@@ -586,7 +607,7 @@ int pil_mss_reset_load_mba(struct pil_desc *pil)
 
 	arch_setup_dma_ops(dma_dev, 0, 0, NULL, 0);
 
-	dma_dev->coherent_dma_mask = DMA_BIT_MASK(32);
+	dma_dev->coherent_dma_mask = DMA_BIT_MASK(sizeof(dma_addr_t) * 8);
 
 	init_dma_attrs(&md->attrs_dma);
 	dma_set_attr(DMA_ATTR_SKIP_ZEROING, &md->attrs_dma);
@@ -698,7 +719,7 @@ static int pil_msa_auth_modem_mdt(struct pil_desc *pil, const u8 *metadata,
 
 
 	trace_pil_func(__func__);
-	dma_dev->coherent_dma_mask = DMA_BIT_MASK(32);
+	dma_dev->coherent_dma_mask = DMA_BIT_MASK(sizeof(dma_addr_t) * 8);
 	dma_set_attr(DMA_ATTR_SKIP_ZEROING, &attrs);
 	dma_set_attr(DMA_ATTR_STRONGLY_ORDERED, &attrs);
 	/* Make metadata physically contiguous and 4K aligned. */

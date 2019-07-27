@@ -498,11 +498,7 @@ nocache:
 	}
 
 found:
-	/*
-	 * Check also calculated address against the vstart,
-	 * because it can be 0 because of big align request.
-	 */
-	if (addr + size > vend || addr < vstart)
+	if (addr + size > vend)
 		goto overflow;
 
 	va->va_start = addr;
@@ -525,7 +521,7 @@ overflow:
 		purged = 1;
 		goto retry;
 	}
-	if (!(gfp_mask & __GFP_NOWARN) && printk_ratelimit())
+	if (printk_ratelimit())
 		pr_warn("vmap allocation for size %lu failed: use vmalloc=<size> to increase size\n",
 			size);
 	kfree(va);
@@ -2272,7 +2268,7 @@ int remap_vmalloc_range_partial(struct vm_area_struct *vma, unsigned long uaddr,
 	if (!(area->flags & VM_USERMAP))
 		return -EINVAL;
 
-	if (kaddr + size > area->addr + get_vm_area_size(area))
+	if (kaddr + size > area->addr + area->size)
 		return -EINVAL;
 
 	do {
