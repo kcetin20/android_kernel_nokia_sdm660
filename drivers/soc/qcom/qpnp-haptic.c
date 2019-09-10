@@ -2298,11 +2298,6 @@ static void qpnp_hap_td_enable(struct timed_output_dev *dev, int time_ms)
 		if (time_ms < 10)
 			time_ms = 10;
 
-	if (is_sw_lra_auto_resonance_control(hap))
-		hrtimer_cancel(&hap->auto_res_err_poll_timer);
-
-	hrtimer_cancel(&hap->hap_timer);
-
 		if (hap->auto_mode) {
 			rc = qpnp_hap_auto_mode_config(hap, time_ms);
 			if (rc < 0) {
@@ -2314,23 +2309,17 @@ static void qpnp_hap_td_enable(struct timed_output_dev *dev, int time_ms)
 
 		time_ms = (time_ms > hap->timeout_ms ?
 				 hap->timeout_ms : time_ms);
-		hap->play_time_ms = time_ms;
-		hrtimer_start(&hap->hap_timer,
-				ktime_set(time_ms / 1000,
-				(time_ms % 1000) * 1000000),
-				HRTIMER_MODE_REL);
+		if (!time_ms) {
+			hap->state = 0;
+		} else {
+			hap->play_time_ms = time_ms;
+			hrtimer_start(&hap->hap_timer,
+					ktime_set(time_ms / 1000,
+					(time_ms % 1000) * 1000000),
+					HRTIMER_MODE_REL);
+		}
 	}
 
-	time_ms = (time_ms > hap->timeout_ms ? hap->timeout_ms : time_ms);
-	if (!time_ms) {
-		hap->state = 0;
-	} else {
-		hap->play_time_ms = time_ms;
-		hap->state = 1;
-		hrtimer_start(&hap->hap_timer,
-			ktime_set(time_ms / 1000, (time_ms % 1000) * 1000000),
-			HRTIMER_MODE_REL);
-		}
 	mutex_unlock(&hap->lock);
 	schedule_work(&hap->work);
 }

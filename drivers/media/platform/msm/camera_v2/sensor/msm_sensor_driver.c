@@ -25,6 +25,11 @@
 #define CAMERA_MASK_S5K3H7 0X04
 #define CAMERA_MASK_S5K3M3 0X02
 #define CAMERA_MASK_S5K3P8 0X04
+#define CAMERA_MASK_S5KGM1SP 0x08 
+#define CAMERA_MASK_S5K5E9YU05  0x10
+#define CAMERA_MASK_OV16885   0x20
+#define CAMERA_MASK_HI846   0x40
+
 
 static int32_t g_camera_ping = 0;
 #endif
@@ -1110,6 +1115,17 @@ CSID_TG:
 		g_camera_ping |= CAMERA_MASK_S5K2L7;
 	else if(!strcmp(slave_info->sensor_name, "s5k3m3sm_b2n_tele"))
 		g_camera_ping |= CAMERA_MASK_S5K3M3;
+	/* FIH-Binn-Add for TAS FAP test -00+{ */
+	else if(!strcmp(slave_info->sensor_name, "s5kgm1sp"))
+		g_camera_ping |= CAMERA_MASK_S5KGM1SP;
+	else if(!strcmp(slave_info->sensor_name, "s5k5e9yu05"))
+		g_camera_ping |= CAMERA_MASK_S5K5E9YU05;
+	else if(!strcmp(slave_info->sensor_name, "ov16885"))
+		g_camera_ping |= CAMERA_MASK_OV16885;
+	else if(!strcmp(slave_info->sensor_name, "hi846"))
+		g_camera_ping |= CAMERA_MASK_HI846;
+	/* FIH-Binn-Add for TAS FAP test -00+}*/
+	
 	pr_err("%s wbl E slave_info->sensor_name = %s \n", __func__, slave_info->sensor_name);
 	pr_err("%s wbl E g_camera_ping = 0x%x \n", __func__, g_camera_ping);
 #endif

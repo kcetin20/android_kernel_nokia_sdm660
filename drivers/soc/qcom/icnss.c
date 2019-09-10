@@ -73,6 +73,8 @@ module_param(qmi_timeout, ulong, 0600);
 #define ICNSS_THRESHOLD_LOW		3450000
 #define ICNSS_THRESHOLD_GUARD		20000
 
+#define ICNSS_MAX_PROBE_CNT		2
+
 #define icnss_ipc_log_string(_x...) do {				\
 	if (icnss_ipc_log_context)					\
 		ipc_log_string(icnss_ipc_log_context, _x);		\
@@ -561,6 +563,12 @@ static int icnss_assign_msa_perm_all(struct icnss_priv *priv,
 	int ret;
 	int i;
 	enum icnss_msa_perm old_perm;
+
+	if (priv->nr_mem_region > QMI_WLFW_MAX_NUM_MEMORY_REGIONS_V01) {
+		icnss_pr_err("Invalid memory region len %d\n",
+			     priv->nr_mem_region);
+		return -EINVAL;
+	}
 
 	for (i = 0; i < priv->nr_mem_region; i++) {
 		old_perm = priv->mem_region[i].perm;
@@ -1125,6 +1133,9 @@ static int icnss_hw_power_off(struct icnss_priv *priv)
 	if (test_bit(HW_ALWAYS_ON, &quirks))
 		return 0;
 
+	if (test_bit(ICNSS_FW_DOWN, &priv->state))
+		return 0;
+
 	icnss_pr_dbg("HW Power off: 0x%lx\n", priv->state);
 
 	spin_lock(&priv->on_off_lock);
@@ -1171,8 +1182,9 @@ bool icnss_is_fw_down(void)
 {
 	if (!penv)
 		return false;
-	else
-		return test_bit(ICNSS_FW_DOWN, &penv->state);
+
+	return test_bit(ICNSS_FW_DOWN, &penv->state) ||
+		test_bit(ICNSS_PD_RESTART, &penv->state);
 }
 EXPORT_SYMBOL(icnss_is_fw_down);
 
@@ -1208,6 +1220,7 @@ static int wlfw_msa_mem_info_send_sync_msg(void)
 	struct wlfw_msa_info_req_msg_v01 req;
 	struct wlfw_msa_info_resp_msg_v01 resp;
 	struct msg_desc req_desc, resp_desc;
+	uint64_t max_mapped_addr;
 
 	if (!penv || !penv->wlfw_clnt)
 		return -ENODEV;
@@ -1254,9 +1267,23 @@ static int wlfw_msa_mem_info_send_sync_msg(void)
 		goto out;
 	}
 
+    max_mapped_addr = penv->msa_pa + penv->msa_mem_size;
 	penv->stats.msa_info_resp++;
 	penv->nr_mem_region = resp.mem_region_info_len;
 	for (i = 0; i < resp.mem_region_info_len; i++) {
+
+		if (resp.mem_region_info[i].size > penv->msa_mem_size ||
+		    resp.mem_region_info[i].region_addr > max_mapped_addr ||
+		    resp.mem_region_info[i].region_addr < penv->msa_pa ||
+		    resp.mem_region_info[i].size +
+		    resp.mem_region_info[i].region_addr > max_mapped_addr) {
+			icnss_pr_dbg("Received out of range Addr: 0x%llx Size: 0x%x\n",
+					resp.mem_region_info[i].region_addr,
+					resp.mem_region_info[i].size);
+			ret = -EINVAL;
+			goto fail_unwind;
+		}
+
 		penv->mem_region[i].reg_addr =
 			resp.mem_region_info[i].region_addr;
 		penv->mem_region[i].size =
@@ -1271,6 +1298,8 @@ static int wlfw_msa_mem_info_send_sync_msg(void)
 
 	return 0;
 
+fail_unwind:
+	memset(&penv->mem_region[0], 0, sizeof(penv->mem_region[0]) * i);
 out:
 	penv->stats.msa_info_err++;
 	ICNSS_QMI_ASSERT();
@@ -2095,6 +2124,7 @@ static int icnss_driver_event_server_arrive(void *data)
 
 err_setup_msa:
 	icnss_assign_msa_perm_all(penv, ICNSS_MSA_PERM_HLOS_ALL);
+	clear_bit(ICNSS_MSA0_ASSIGNED, &penv->state);
 err_power_on:
 	icnss_hw_power_off(penv);
 fail:
@@ -2126,7 +2156,8 @@ static int icnss_driver_event_server_exit(void *data)
 
 static int icnss_call_driver_probe(struct icnss_priv *priv)
 {
-	int ret;
+	int ret = 0;
+	int probe_cnt = 0;
 
 	if (!priv->ops || !priv->ops->probe)
 		return 0;
@@ -2138,10 +2169,15 @@ static int icnss_call_driver_probe(struct icnss_priv *priv)
 
 	icnss_hw_power_on(priv);
 
-	ret = priv->ops->probe(&priv->pdev->dev);
+	while (probe_cnt < ICNSS_MAX_PROBE_CNT) {
+		ret = priv->ops->probe(&priv->pdev->dev);
+		probe_cnt++;
+		if (ret != -EPROBE_DEFER)
+			break;
+	}
 	if (ret < 0) {
-		icnss_pr_err("Driver probe failed: %d, state: 0x%lx\n",
-			     ret, priv->state);
+		icnss_pr_err("Driver probe failed: %d, state: 0x%lx, probe_cnt: %d\n",
+			     ret, priv->state, probe_cnt);
 		goto out;
 	}
 
@@ -2187,6 +2223,12 @@ static int icnss_pd_restart_complete(struct icnss_priv *priv)
 
 	if (!priv->ops || !priv->ops->reinit)
 		goto out;
+
+	if (test_bit(ICNSS_FW_DOWN, &priv->state)) {
+		icnss_pr_err("FW is in bad state, state: 0x%lx\n",
+			     priv->state);
+		goto out;
+	}
 
 	if (!test_bit(ICNSS_DRIVER_PROBED, &priv->state))
 		goto call_probe;
@@ -2248,6 +2290,7 @@ out:
 static int icnss_driver_event_register_driver(void *data)
 {
 	int ret = 0;
+	int probe_cnt = 0;
 
 	if (penv->ops)
 		return -EEXIST;
@@ -2256,6 +2299,12 @@ static int icnss_driver_event_register_driver(void *data)
 
 	if (test_bit(SKIP_QMI, &quirks))
 		set_bit(ICNSS_FW_READY, &penv->state);
+
+	if (test_bit(ICNSS_FW_DOWN, &penv->state)) {
+		icnss_pr_err("FW is in bad state, state: 0x%lx\n",
+			     penv->state);
+		return -ENODEV;
+	}
 
 	if (!test_bit(ICNSS_FW_READY, &penv->state)) {
 		icnss_pr_dbg("FW is not ready yet, state: 0x%lx\n",
@@ -2267,11 +2316,15 @@ static int icnss_driver_event_register_driver(void *data)
 	if (ret)
 		goto out;
 
-	ret = penv->ops->probe(&penv->pdev->dev);
-
+	while (probe_cnt < ICNSS_MAX_PROBE_CNT) {
+		ret = penv->ops->probe(&penv->pdev->dev);
+		probe_cnt++;
+		if (ret != -EPROBE_DEFER)
+			break;
+	}
 	if (ret) {
-		icnss_pr_err("Driver probe failed: %d, state: 0x%lx\n",
-			     ret, penv->state);
+		icnss_pr_err("Driver probe failed: %d, state: 0x%lx, probe_cnt: %d\n",
+			     ret, penv->state, probe_cnt);
 		goto power_off;
 	}
 
@@ -2335,7 +2388,7 @@ static int icnss_driver_event_pd_service_down(struct icnss_priv *priv,
 	if (!test_bit(ICNSS_WLFW_EXISTS, &priv->state))
 		goto out;
 
-	if (test_bit(ICNSS_PD_RESTART, &priv->state)) {
+	if (test_bit(ICNSS_PD_RESTART, &priv->state) && event_data->crashed) {
 		icnss_pr_err("PD Down while recovery inprogress, crashed: %d, state: 0x%lx\n",
 			     event_data->crashed, priv->state);
 		ICNSS_ASSERT(0);
@@ -2497,8 +2550,18 @@ static int icnss_modem_notifier_nb(struct notifier_block *nb,
 	if (code != SUBSYS_BEFORE_SHUTDOWN)
 		return NOTIFY_OK;
 
-	if (test_bit(ICNSS_PDR_REGISTERED, &priv->state))
+	if (test_bit(ICNSS_PDR_REGISTERED, &priv->state)) {
+		set_bit(ICNSS_FW_DOWN, &priv->state);
+		icnss_ignore_qmi_timeout(true);
+
+		fw_down_data.crashed = !!notif->crashed;
+		if (test_bit(ICNSS_FW_READY, &priv->state) &&
+		    !test_bit(ICNSS_DRIVER_UNLOADING, &priv->state))
+			icnss_call_driver_uevent(priv,
+						 ICNSS_UEVENT_FW_DOWN,
+						 &fw_down_data);
 		return NOTIFY_OK;
+	}
 
 	icnss_pr_info("Modem went down, state: 0x%lx, crashed: %d\n",
 		      priv->state, notif->crashed);
@@ -2632,14 +2695,19 @@ static int icnss_service_notifier_notify(struct notifier_block *nb,
 	icnss_pr_info("PD service down, pd_state: %d, state: 0x%lx: cause: %s\n",
 		      *state, priv->state, icnss_pdr_cause[cause]);
 event_post:
-	set_bit(ICNSS_FW_DOWN, &priv->state);
-	icnss_ignore_qmi_timeout(true);
-	clear_bit(ICNSS_HOST_TRIGGERED_PDR, &priv->state);
+	if (!test_bit(ICNSS_FW_DOWN, &priv->state)) {
+		set_bit(ICNSS_FW_DOWN, &priv->state);
+		icnss_ignore_qmi_timeout(true);
 
-	fw_down_data.crashed = event_data->crashed;
-	if (!test_bit(ICNSS_DRIVER_UNLOADING, &priv->state))
-		icnss_call_driver_uevent(priv, ICNSS_UEVENT_FW_DOWN,
-					 &fw_down_data);
+		fw_down_data.crashed = event_data->crashed;
+		if (test_bit(ICNSS_FW_READY, &priv->state) &&
+		    !test_bit(ICNSS_DRIVER_UNLOADING, &priv->state))
+			icnss_call_driver_uevent(priv,
+						 ICNSS_UEVENT_FW_DOWN,
+						 &fw_down_data);
+	}
+
+	clear_bit(ICNSS_HOST_TRIGGERED_PDR, &priv->state);
 	icnss_driver_event_post(ICNSS_DRIVER_EVENT_PD_SERVICE_DOWN,
 				ICNSS_EVENT_SYNC, event_data);
 done:

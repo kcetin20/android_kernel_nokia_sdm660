@@ -9983,6 +9983,7 @@ struct msm_camera_i2c_reg_array s5k5e9_drg_aux_res1_recover[]=
 //CTL ++
 struct msm_camera_i2c_reg_array s5k2l8_ctl_main_res0_recover[]=
 {
+	{0x0100, 0x0000, 0x0000}, \
 	{0x6028, 0x4000, 0x0000}, \
 	{0x6010, 0x0001, 0x0BB8}, \
 	{0x6214, 0xF970, 0x0000}, \
@@ -11311,6 +11312,7 @@ struct msm_camera_i2c_reg_array s5k2l8_ctl_main_res0_recover[]=
 };
 struct msm_camera_i2c_reg_array s5k2l8_ctl_main_res1_recover[]=
 {
+	{0x0100, 0x0000, 0x0000}, \
 	{0x6028, 0x4000, 0x0000}, \
 	{0x6010, 0x0001, 0x0BB8}, \
 	{0x6214, 0xF970, 0x0000}, \
@@ -12639,7 +12641,8 @@ struct msm_camera_i2c_reg_array s5k2l8_ctl_main_res1_recover[]=
 };
 struct msm_camera_i2c_reg_array s5k2l8_ctl_main_res2_recover[]=
 {
-    {0x6028, 0x4000, 0x0000}, \
+	{0x0100, 0x0000, 0x0000}, \
+	{0x6028, 0x4000, 0x0000}, \
 	{0x6010, 0x0001, 0x0BB8}, \
 	{0x6214, 0xF970, 0x0000}, \
 	{0x6218, 0xF150, 0x0000}, \
@@ -14394,6 +14397,7 @@ static struct out_info_array s5k5e9_drg_aux_out_info =
 };
 //DRG --
 //CTL ++
+#if 0
 static struct out_info_array s5k2l8_ctl_main_out_info =
 {
     .out_info=
@@ -14444,6 +14448,7 @@ static struct out_info_array s5k4h7_ctl_front_out_info =
     .size = 2,
 };
 //s5k5e9_ctl_aux_out_info -> s5k5e9_drg_aux_out_info
+#endif
 //CTL --
 int  fih_get_sensor_i2c_output_addr(const char *sensor_name, uint32_t* outputX, uint32_t* outputY)
 {
@@ -14713,6 +14718,7 @@ int  fih_get_recover_sensor_setting(const char *sensor_name, uint16_t outputX, u
 	}
     //DRG --
     //CTL ++
+#if 0
     else if(strncmp(sensor_name, "s5k2l8_ctl_main", strlen("s5k2l8_ctl_main"))==0)
 	{
 		for(i = 0; i<s5k2l8_ctl_main_out_info.size; i++)
@@ -14758,6 +14764,7 @@ int  fih_get_recover_sensor_setting(const char *sensor_name, uint16_t outputX, u
 		if(i == s5k5e9_drg_aux_out_info.size)
 			res = -1;
 	}
+#endif
     //CTL --
 
 	else

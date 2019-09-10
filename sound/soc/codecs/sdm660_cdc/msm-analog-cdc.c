@@ -2205,7 +2205,8 @@ static int msm_anlg_cdc_codec_enable_adc(struct snd_soc_dapm_widget *w,
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
 		msm_anlg_cdc_codec_enable_adc_block(codec, 1);
-		if (w->reg == MSM89XX_PMIC_ANALOG_TX_2_EN)
+		//rita change for tas CFILT connect setting wrong at 20181207
+		if ((w->reg == MSM89XX_PMIC_ANALOG_TX_2_EN) && (strstr(saved_command_line, "androidboot.device=TAS") == NULL))
 			snd_soc_update_bits(codec,
 			MSM89XX_PMIC_ANALOG_MICB_1_CTL, 0x02, 0x02);
 		/*

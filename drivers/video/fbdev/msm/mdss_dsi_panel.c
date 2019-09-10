@@ -431,8 +431,12 @@ static int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 	if (rc) {
 		pr_err("request reset gpio failed, rc=%d\n",
 			rc);
-		BBOX_LCM_GPIO_FAIL	//SW4-HL-Display-BBox-00+_20150610	//SW4-HL-Display-BBox-01*_20160804
-		goto rst_gpio_err;
+		if (ctrl_pdata->panel_data.panel_info.panel_id != FIH_FT8719_1080P_VIDEO_PANEL) {
+			BBOX_LCM_GPIO_FAIL	//SW4-HL-Display-BBox-00+_20150610	//SW4-HL-Display-BBox-01*_20160804
+			goto rst_gpio_err;
+		} else {
+			rc = 0;
+		}
 	}
 
 	if (gpio_is_valid(ctrl_pdata->bklt_en_gpio)) {
@@ -720,6 +724,35 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 				}
 				break;
 			//ZZDC sunqiupeng add for bringup PL2 2nd panel@20171226 start
+			case FIH_FT8719_1080P_VIDEO_PANEL:
+				{
+					if (pdata->panel_info.rst_seq_len) {
+						/*rc = gpio_direction_output(ctrl_pdata->tp_rst_gpio,pdata->panel_info.rst_seq[0]);
+						if (rc) {
+							pr_err("%s: unable to set dir for rst gpio\n",
+								__func__);
+							goto exit;
+						}
+						gpio_set_value((ctrl_pdata->tp_rst_gpio), 1);
+						usleep_range(2 * 1000, 2 * 1000);*/
+
+						rc = gpio_direction_output(ctrl_pdata->rst_gpio,
+							pdata->panel_info.rst_seq[0]);
+						if (rc) {
+							pr_err("%s: unable to set dir for rst gpio\n",
+								__func__);
+							goto exit;
+						}
+					}
+
+					for (i = 0; i < pdata->panel_info.rst_seq_len; ++i) {
+						gpio_set_value((ctrl_pdata->rst_gpio),
+							pdata->panel_info.rst_seq[i]);
+						if (pdata->panel_info.rst_seq[++i])
+							usleep_range(pinfo->rst_seq[i] * 1000, pinfo->rst_seq[i] * 1000);
+					}
+				}
+				break;
 			case FIH_R69338_1080P_VIDEO_PANEL_PL2:
 				{
 					if (pdata->panel_info.rst_seq_len) {
@@ -880,6 +913,14 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 				}
 				break;
 			//ZZDC sunqiupeng add for bringup PL2 2nd panel@20171226 start
+			case FIH_FT8719_1080P_VIDEO_PANEL:
+				{
+					gpio_set_value((ctrl_pdata->rst_gpio), 0);
+					gpio_set_value((ctrl_pdata->tp_rst_gpio), 0);
+					gpio_free(ctrl_pdata->rst_gpio);
+					gpio_free(ctrl_pdata->tp_rst_gpio);
+				}
+				break;
 			case FIH_R69338_1080P_VIDEO_PANEL_PL2:
 				{
 					gpio_set_value((ctrl_pdata->rst_gpio), 0);

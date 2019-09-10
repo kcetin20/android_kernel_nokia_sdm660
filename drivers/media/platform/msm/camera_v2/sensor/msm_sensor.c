@@ -362,7 +362,7 @@ static void fih_msm_sensor_restart_stream(struct msm_sensor_ctrl_t *s_ctrl)
 		if(rc < 0){
 			goto END;
 		}
-		pr_err("[RK_I2C]%s: size %d\n", __func__, size);
+		pr_err("%s: setting size %d\n", __func__, size);
 
 		pr_err("%s:%d sensor name:%s recover start\n",__func__,__LINE__,sensor_name);
 		//power down/power up

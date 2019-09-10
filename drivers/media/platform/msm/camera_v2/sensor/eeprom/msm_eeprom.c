@@ -420,11 +420,20 @@ static int eeprom_parse_memory_map(struct msm_eeprom_ctrl_t *e_ctrl,
 eeprom_init_retry:
 					e_ctrl->i2c_client.addr_type =
 						eeprom_map->mem_settings[i].addr_type;
-					rc = e_ctrl->i2c_client.i2c_func_tbl->
-						i2c_read_seq(&(e_ctrl->i2c_client),
-						eeprom_map->mem_settings[i].reg_addr,
-						memptr,
-						eeprom_map->mem_settings[i].reg_data);
+					if (eeprom_map->mem_settings[i].data_type == MSM_CAMERA_I2C_WORD_DATA) {
+						rc = e_ctrl->i2c_client.i2c_func_tbl->i2c_read(
+							&(e_ctrl->i2c_client),
+							eeprom_map->mem_settings[i].reg_addr,
+							(uint16_t *)memptr,
+							eeprom_map->mem_settings[i].data_type);
+					} else {
+						rc = e_ctrl->i2c_client.i2c_func_tbl->
+							i2c_read_seq(&(e_ctrl->i2c_client),
+							eeprom_map->mem_settings[i].reg_addr,
+							memptr,
+							eeprom_map->mem_settings[i].reg_data);
+					}
+
 					msleep(eeprom_map->mem_settings[i].delay);
 #if FIH_CAMERA_BBS_DEBUG
 					fih_camera_bbs_by_cci(e_ctrl->i2c_client.cci_client->cci_i2c_master,
@@ -507,11 +516,19 @@ eeprom_init_retry:
 eeprom_init_retry_recal:
 					e_ctrl->i2c_client.addr_type =
 						eeprom_map->mem_settings[i].addr_type;
-					rc = e_ctrl->i2c_client.i2c_func_tbl->
-						i2c_read_seq(&(e_ctrl->i2c_client),
-						eeprom_map->mem_settings[i].reg_addr,
-						memptr,
-						eeprom_map->mem_settings[i].reg_data);
+					if (eeprom_map->mem_settings[i].data_type == MSM_CAMERA_I2C_WORD_DATA) {
+						rc = e_ctrl->i2c_client.i2c_func_tbl->i2c_read(
+							&(e_ctrl->i2c_client),
+							eeprom_map->mem_settings[i].reg_addr,
+							(uint16_t *)memptr,
+							eeprom_map->mem_settings[i].data_type);
+					} else {
+						rc = e_ctrl->i2c_client.i2c_func_tbl->
+							i2c_read_seq(&(e_ctrl->i2c_client),
+							eeprom_map->mem_settings[i].reg_addr,
+							memptr,
+							eeprom_map->mem_settings[i].reg_data);
+					}
 					msleep(eeprom_map->mem_settings[i].delay);
 					if (rc < 0) {
 						eeprom_init_retry_cnt++;

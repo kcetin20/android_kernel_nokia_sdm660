@@ -2741,6 +2741,20 @@ static struct snd_soc_dai_link msm_mi2s_be_dai_links_nxp[] = {
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 	},
+	{
+		.name = LPASS_BE_TERT_MI2S_TX,
+		.stream_name = "Tertiary MI2S Capture",
+		.cpu_dai_name = "msm-dai-q6-mi2s.2",
+		.platform_name = "msm-pcm-routing",
+		.codec_name = "msm-stub-codec.1",
+		.codec_dai_name = "msm-stub-tx",
+		.no_pcm = 1,
+		.dpcm_capture = 1,
+		.be_id = MSM_BACKEND_DAI_TERTIARY_MI2S_TX,
+		.be_hw_params_fixup = msm_common_be_hw_params_fixup,
+		.ops = &msm_mi2s_be_ops,
+		.ignore_suspend = 1,
+	},
 };
 
 /*Add for TI TAS2557 */
@@ -2760,6 +2774,69 @@ static struct snd_soc_dai_link msm_mi2s_be_dai_links_ti[] = {
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 	},
+	{
+		.name = LPASS_BE_TERT_MI2S_TX,
+		.stream_name = "Tertiary MI2S Capture",
+		.cpu_dai_name = "msm-dai-q6-mi2s.2",
+		.platform_name = "msm-pcm-routing",
+		.codec_name = "msm-stub-codec.1",
+		.codec_dai_name = "msm-stub-tx",
+		.no_pcm = 1,
+		.dpcm_capture = 1,
+		.be_id = MSM_BACKEND_DAI_TERTIARY_MI2S_TX,
+		.be_hw_params_fixup = msm_common_be_hw_params_fixup,
+		.ops = &msm_mi2s_be_ops,
+		.ignore_suspend = 1,
+	},
+};
+
+/*Add for TI TAS2560 Jennyxu */
+static struct snd_soc_dai_link msm_mi2s_be_dai_links_ti_tas2560[] = {
+	{
+		.name = LPASS_BE_TERT_MI2S_RX,
+		.stream_name = "Tertiary MI2S Playback",
+		.cpu_dai_name = "msm-dai-q6-mi2s.2",
+		.platform_name = "msm-pcm-routing",
+		.codec_name = "tas2560.7-004c",
+		.codec_dai_name = "tas2560 ASI1",
+		.no_pcm = 1,
+		.dpcm_playback = 1,
+		.be_id = MSM_BACKEND_DAI_TERTIARY_MI2S_RX,
+		.be_hw_params_fixup = msm_common_be_hw_params_fixup,
+		.ops = &msm_mi2s_be_ops,
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+	},
+    {
+		.name = LPASS_BE_TERT_MI2S_TX,
+		.stream_name = "Tertiary MI2S Capture",
+		.cpu_dai_name = "msm-dai-q6-mi2s.2",
+		.platform_name = "msm-pcm-routing",
+		.codec_name = "tas2560.7-004c",
+		.codec_dai_name = "tas2560 ASI1",
+		.no_pcm = 1,
+		.dpcm_capture = 1,
+		.be_id = MSM_BACKEND_DAI_TERTIARY_MI2S_TX,
+		.be_hw_params_fixup = msm_common_be_hw_params_fixup,
+		.ops = &msm_mi2s_be_ops,
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+	},
+	{/*Hostless Port for TX*/
+        .name = "Tertiary MI2S_TX Hostless",
+        .stream_name = "Tertiary MI2S_TX Hostless",
+        .cpu_dai_name = "TERT_MI2S_TX_HOSTLESS",
+        .platform_name  = "msm-pcm-hostless",
+        .dynamic = 1,
+        .dpcm_capture = 1,
+         .trigger = {SND_SOC_DPCM_TRIGGER_POST,
+                        SND_SOC_DPCM_TRIGGER_POST},
+         .no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
+         .ignore_suspend = 1,
+         //.ignore_pmdown_time = 1, //dai link has playback support
+         .codec_name     = "tas2560.7-004c",
+         .codec_dai_name = "tas2560 ASI1",
+    },
 };
 
 
@@ -2778,6 +2855,20 @@ static struct snd_soc_dai_link msm_mi2s_be_dai_links_non_amp[] = {
 		.ops = &msm_mi2s_be_ops,
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
+	},
+	{
+		.name = LPASS_BE_TERT_MI2S_TX,
+		.stream_name = "Tertiary MI2S Capture",
+		.cpu_dai_name = "msm-dai-q6-mi2s.2",
+		.platform_name = "msm-pcm-routing",
+		.codec_name = "msm-stub-codec.1",
+		.codec_dai_name = "msm-stub-tx",
+		.no_pcm = 1,
+		.dpcm_capture = 1,
+		.be_id = MSM_BACKEND_DAI_TERTIARY_MI2S_TX,
+		.be_hw_params_fixup = msm_common_be_hw_params_fixup,
+		.ops = &msm_mi2s_be_ops,
+		.ignore_suspend = 1,
 	},
 };
 static struct snd_soc_dai_link msm_usb_audio_dai_links[] = {
@@ -2853,20 +2944,6 @@ static struct snd_soc_dai_link msm_mi2s_be_dai_links[] = {
 		.no_pcm = 1,
 		.dpcm_capture = 1,
 		.be_id = MSM_BACKEND_DAI_SECONDARY_MI2S_TX,
-		.be_hw_params_fixup = msm_common_be_hw_params_fixup,
-		.ops = &msm_mi2s_be_ops,
-		.ignore_suspend = 1,
-	},
-	{
-		.name = LPASS_BE_TERT_MI2S_TX,
-		.stream_name = "Tertiary MI2S Capture",
-		.cpu_dai_name = "msm-dai-q6-mi2s.2",
-		.platform_name = "msm-pcm-routing",
-		.codec_name = "msm-stub-codec.1",
-		.codec_dai_name = "msm-stub-tx",
-		.no_pcm = 1,
-		.dpcm_capture = 1,
-		.be_id = MSM_BACKEND_DAI_TERTIARY_MI2S_TX,
 		.be_hw_params_fixup = msm_common_be_hw_params_fixup,
 		.ops = &msm_mi2s_be_ops,
 		.ignore_suspend = 1,
@@ -3233,13 +3310,21 @@ static struct snd_soc_card *msm_int_populate_sndcard_dailinks(
 		    	   msm_mi2s_be_dai_links_nxp,
 		       	sizeof(msm_mi2s_be_dai_links_nxp));
 			len1 += ARRAY_SIZE(msm_mi2s_be_dai_links_nxp);
-		}else if (of_property_read_bool(dev->of_node,
-				  	"fih,ti-tas2557")) {
+		} else if (of_property_read_bool(dev->of_node,
+                  "fih,ti-tas2557")) {
+          memcpy(dailink + len1,
+                 msm_mi2s_be_dai_links_ti,
+              sizeof(msm_mi2s_be_dai_links_ti));
+          len1 += ARRAY_SIZE(msm_mi2s_be_dai_links_ti);
+		} else if (of_property_read_bool(dev->of_node,
+				  	"fih,ti-tas2560")) {
+            dev_info(dev,"%s: jennyxu dai links\n",__func__);
+
 			memcpy(dailink + len1,
-		    	   msm_mi2s_be_dai_links_ti,
-		       	sizeof(msm_mi2s_be_dai_links_ti));
-			len1 += ARRAY_SIZE(msm_mi2s_be_dai_links_ti);
-		}else{
+		    	   msm_mi2s_be_dai_links_ti_tas2560,
+		       	sizeof(msm_mi2s_be_dai_links_ti_tas2560));
+			len1 += ARRAY_SIZE(msm_mi2s_be_dai_links_ti_tas2560);//jennyxu
+        }else{
 			memcpy(dailink + len1,
 		    	   msm_mi2s_be_dai_links_non_amp,
 		       	sizeof(msm_mi2s_be_dai_links_non_amp));

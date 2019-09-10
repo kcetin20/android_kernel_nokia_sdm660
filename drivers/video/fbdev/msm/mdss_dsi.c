@@ -477,7 +477,7 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 		//SW4-HL-Display-BringUpCTCOTM1911A-00+{_20180116
 		case FIH_CTC_OTM1911A_FHD_VIDEO_PANEL:
 		case FIH_AUO_OTM1911A_FHD_VIDEO_PANEL:		//SW4-HL-Display-OTM1911A-AUO-BringUp-00+_20180221
-                case FIH_CTC_JD9522Z_FHD_VIDEO_PANEL:           //SW4-HL-CTL-HDR-ReadLcmSwId-00+_20180330
+        case FIH_CTC_JD9522Z_FHD_VIDEO_PANEL:           //SW4-HL-CTL-HDR-ReadLcmSwId-00+_20180330
                         {
                                 pr_debug("\n\n******************** [HL]%s: DRG All Panels\n", __func__);
 
@@ -541,6 +541,8 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 				else
 				pr_debug("********************%s,do nothing about reset**********************\n\n", __func__);
 			}
+			break;
+		case FIH_FT8719_1080P_VIDEO_PANEL:
 			break;
 		//ZZDC sunqiupeng add for bringup PL2 2nd panel@20171226 start
 		case FIH_R69338_1080P_VIDEO_PANEL_PL2:
@@ -642,7 +644,7 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 		//SW4-HL-Display-BringUpCTCOTM1911A-00+{_20180116
 		case FIH_CTC_OTM1911A_FHD_VIDEO_PANEL:
 		case FIH_AUO_OTM1911A_FHD_VIDEO_PANEL:	//SW4-HL-Display-OTM1911A-AUO-BringUp-00+_20180221
-                case FIH_CTC_JD9522Z_FHD_VIDEO_PANEL:           //SW4-HL-CTL-HDR-ReadLcmSwId-00+_20180330
+        case FIH_CTC_JD9522Z_FHD_VIDEO_PANEL:           //SW4-HL-CTL-HDR-ReadLcmSwId-00+_20180330
 			{
                                 pr_debug("\n\n******************** [HL]%s: DRG All Panels\n", __func__);
 
@@ -712,6 +714,22 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 			}
 			break;
 		//SW4-JasonSH-Display-BringUpFT8716U-00+}_20170619
+		case FIH_FT8719_1080P_VIDEO_PANEL:
+			{
+				#if 0
+				pr_err("\n\n********************%s, FIH_FT8719_1080P_VIDEO_PANEL **********************\n\n", __func__);
+				if (!gdouble_tap_enable)
+				{
+					udelay(5 * 1000);
+					ret = msm_dss_enable_vreg(ctrl_pdata->panel_power_data.vreg_config, ctrl_pdata->panel_power_data.num_vreg, 0);
+					if (ret)
+						pr_err("%s: failed to disable vregs for %s\n", __func__, __mdss_dsi_pm_name(DSI_PANEL_PM));
+				}
+				else
+					pr_debug("********************%s, do nothing about power **********************\n\n", __func__);
+				#endif
+			}
+			break;
 		//ZZDC sunqiupeng add for bringup PL2 2nd panel@20171226 start
 		case FIH_R69338_1080P_VIDEO_PANEL_PL2:
 			{
@@ -908,7 +926,7 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 		//SW4-HL-Display-BringUpCTCOTM1911A-00+{_20180116
 		case FIH_CTC_OTM1911A_FHD_VIDEO_PANEL:
 		case FIH_AUO_OTM1911A_FHD_VIDEO_PANEL:	//SW4-HL-Display-OTM1911A-AUO-BringUp-00+_20180221
-                case FIH_CTC_JD9522Z_FHD_VIDEO_PANEL:           //SW4-HL-CTL-HDR-ReadLcmSwId-00+_20180330
+        case FIH_CTC_JD9522Z_FHD_VIDEO_PANEL:           //SW4-HL-CTL-HDR-ReadLcmSwId-00+_20180330
 			{
                                 pr_debug("\n\n******************** [HL]%s: DRG All Panels\n", __func__);
 
@@ -1001,6 +1019,7 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 			break;
 		//SW4-JasonSH-Display-BringUpFT8716U-00+{_20170619
 		case FIH_FT8716U_1080P_CTC_VIDEO_PANEL:
+		case FIH_FT8719_1080P_VIDEO_PANEL:
 			{
 				/*int gpio_status = 0;
 				pr_debug("\n\n******************** [JasonSH] %s, FIH_FT8716U_1080P_CTC_VIDEO_PANEL **********************\n\n", __func__);
@@ -1352,6 +1371,23 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 						udelay(5*1000);
 						gpio_set_value((ctrl_pdata->rst_gpio), 1);
 						gpio_set_value((ctrl_pdata->tp_rst_gpio), 1);
+						pr_debug("********************%s,do something about reset**********************\n\n", __func__);
+					}
+				}
+				break;
+			case FIH_FT8719_1080P_VIDEO_PANEL:
+				{
+					if (!gdouble_tap_enable)
+					{
+						ret = mdss_dsi_panel_reset(pdata, 1);
+						if (ret)
+						pr_err("%s: Panel reset failed. rc=%d\n", __func__, ret);
+					}
+					else
+					{
+						gpio_set_value((ctrl_pdata->rst_gpio), 0);
+						udelay(5*1000);
+						gpio_set_value((ctrl_pdata->rst_gpio), 1);
 						pr_debug("********************%s,do something about reset**********************\n\n", __func__);
 					}
 				}
@@ -2549,6 +2585,7 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 		pr_err("%s:Panel power on failed. rc=%d\n", __func__, ret);
 		goto end;
 	}
+	udelay(3*1000);
 
 	if (mdss_panel_is_power_on(cur_power_state)) {
 		pr_debug("%s: dsi_on from panel low power state\n", __func__);
@@ -2639,6 +2676,7 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 				}
 				break;
 			case FIH_FT8716U_1080P_CTC_VIDEO_PANEL:
+			case FIH_FT8719_1080P_VIDEO_PANEL:
 				{
 					if (!gdouble_tap_enable)
 						mdss_dsi_panel_reset(pdata, 1);
@@ -2877,7 +2915,6 @@ static int mdss_dsi_blank(struct mdss_panel_data *pdata, int power_state)
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
-
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 	mipi = &pdata->panel_info.mipi;
@@ -4079,6 +4116,7 @@ EXPORT_SYMBOL(SendAIEOnlyAfterResume);
 //SW4-HL-Display-ImplementCECTCABC-00+}_20160126
 extern void fts_tp_lcm_suspend(void);//ZZDC-snow-Touch-_20170809
 extern void hlt_tp_lcm_suspend(void);//add by snow
+extern void fts_tp_lcm_suspend_8719(void);
 static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 				  int event, void *arg)
 {
@@ -4100,7 +4138,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	pr_debug("%s+: ctrl=%d event=%d\n", __func__, ctrl_pdata->ndx, event);
 
 	MDSS_XLOG(event, arg, ctrl_pdata->ndx, 0x3333);
-
 	switch (event) {
 	case MDSS_EVENT_CHECK_PARAMS:
 		pr_debug("%s:Entered Case MDSS_EVENT_CHECK_PARAMS\n", __func__);
@@ -4212,6 +4249,14 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 					fts_tp_lcm_suspend();
 				}
 				break;
+			case FIH_FT8719_1080P_VIDEO_PANEL:
+				{
+					pr_debug("\n\n***%s: FIH_FT8719_1080P_VIDEO_PANEL ***\n\n", __func__);
+
+					pr_debug("lcm is 8719 suspend");
+					fts_tp_lcm_suspend_8719();
+				}
+				break;
 				//ZZDC sunqiupeng add for bringup PL2 2nd panel@20171226 begin
 			case FIH_R69338_1080P_VIDEO_PANEL_PL2:
 				{
@@ -4240,6 +4285,43 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 
 		rc = mdss_dsi_off(pdata, power_state);
 		pr_debug("[HL]%s: MDSS_EVENT_PANEL_OFF <-- end\n", __func__);
+		break;
+	case MDSS_EVENT_CLOSE:
+		if (ctrl_pdata->panel_data.panel_info.panel_id == FIH_FT8719_1080P_VIDEO_PANEL)
+		{
+			if (!gdouble_tap_enable)
+			{
+				ret = mdss_dsi_panel_reset(pdata, 0);
+				if (ret) {
+					pr_warn("%s: Panel reset failed. rc=%d\n", __func__, ret);
+					ret = 0;
+				}
+			
+				udelay(5 * 1000);
+				ret = msm_dss_enable_vreg(ctrl_pdata->panel_power_data.vreg_config, ctrl_pdata->panel_power_data.num_vreg, 0);
+				if (ret)
+					pr_err("%s: failed to disable vregs for %s\n", __func__, __mdss_dsi_pm_name(DSI_PANEL_PM));
+			}
+			else
+				pr_debug("********************%s, do nothing about power **********************\n\n", __func__);
+			
+			udelay(6 * 1000);
+			gpio_set_value(ctrl_pdata->iovdd_enable, 0);
+			gpio_free(ctrl_pdata->iovdd_enable);
+		}
+		break;
+	case MDSS_EVENT_SUSPEND:
+		if (ctrl_pdata->panel_data.panel_info.panel_id == FIH_FT8719_1080P_VIDEO_PANEL)
+		{
+			if (!gdouble_tap_enable)
+			{
+				ret = msm_dss_enable_vreg(ctrl_pdata->panel_power_data.vreg_config, ctrl_pdata->panel_power_data.num_vreg, 0);
+				if (ret)
+					pr_err("%s: failed to disable vregs for %s\n", __func__, __mdss_dsi_pm_name(DSI_PANEL_PM));
+			}
+			else
+				pr_debug("********************%s, do nothing about power **********************\n\n", __func__);
+		}
 		break;
 	case MDSS_EVENT_DISABLE_PANEL:
 		pr_debug("[HL]%s: MDSS_EVENT_DISABLE_PANEL <-- start\n", __func__);
